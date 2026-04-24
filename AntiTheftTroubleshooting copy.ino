@@ -2,8 +2,8 @@
 const int buttonPin = 4;
 
 const int yellowLED = 6;
-const int greenLED  = 7;
-const int redLED    = 8;
+const int greenLED  = 8;
+const int redLED    = 7;
 
 const int speakerPin = 9;
 
