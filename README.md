@@ -1,3 +1,10 @@
+
+
+
+
+
+
+
 Troubleshooting Code Description (v6)
 
 This version implements a simplified anti-theft control system without the MPU-6050 sensor. 
