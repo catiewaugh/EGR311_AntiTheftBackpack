@@ -1,3 +1,63 @@
+### Code Description (Final MPU-6050 Anti-Theft Backpack System)
+
+This program is a motion-based security system using an **Arduino Nano and MPU-6050 sensor**. It has three states: **REST (safe), ARMED (monitoring), and ALARM (intrusion detected)**. The system is turned on and off using a latching switch. When ARMED, the sensor records a baseline position, then continuously checks for movement. If movement exceeds a set threshold, the system triggers an alarm with a red LED and buzzer sound. A short delay after arming prevents false alarms during setup movement.
+
+---
+
+### Variable Descriptions
+
+#### Pins
+
+* `PIN_SWITCH (4)` → Switch to change system mode (REST / ARMED / reset ALARM)
+* `PIN_LED_GREEN (8)` → Green LED for REST (safe)
+* `PIN_LED_YELLOW (6)` → Yellow LED for ARMED (monitoring)
+* `PIN_LED_RED (7)` → Red LED for ALARM (intrusion)
+* `PIN_SPEAKER (9)` → Buzzer for alarm sound
+
+---
+
+#### MPU-6050 Sensor
+
+* `AccX, AccY, AccZ` → Detect movement in straight-line directions
+* `GyroX, GyroY, GyroZ` → Detect rotation/motion speed
+* `AccError* / GyroError*` → Calibration values to reduce sensor noise
+
+---
+
+#### Motion Tracking
+
+* `roll, pitch, yaw` → Current orientation of the sensor
+* `baselineRoll, baselinePitch, baselineYaw` → Reference position when system is armed
+* `THRESHOLD (0.5)` → Minimum movement needed to trigger alarm
+
+---
+
+#### System Control
+
+* `currentState` → Tracks system mode (REST, ARMED, ALARM)
+* `readyForNext` → Prevents multiple switch triggers per press
+* `armedAt` → Timer used for 2-second delay after arming
+
+---
+
+#### Alarm Timing
+
+* `lastToneTime` → Controls speed of buzzer beeping
+* `toneHigh` → Switches between two alarm tones
+
+---
+
+### How It Works
+
+* System starts in **REST (green LED)**
+* Switch → **ARMED (yellow LED)**
+* Sensor takes a **baseline reading**
+* After 2 seconds, movement is checked
+* If movement is too large → **ALARM (red LED + buzzer)**
+* Switch can reset system back to REST
+* Alarm sound alternates between two tones for warning effect
+
+
 
 
 
