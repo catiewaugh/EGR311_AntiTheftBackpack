@@ -1,87 +1,88 @@
-// PIN SETUP
-const int buttonPin = 4;
+/*
+  Anti-Theft Backpack — TROUBLESHOOTING CODE v6 (No MPU)
+  ========================================================
+  Fixed:
+    - LED pin assignments corrected (green=D7, yellow=D6, red=D8)
+    - State advances IMMEDIATELY when switch latches ON (goes LOW)
+    - Waits for switch to latch OFF (goes HIGH) before allowing next advance
 
-const int yellowLED = 6;
-const int greenLED  = 8;
-const int redLED    = 7;
+  Wiring:
+    Switch: one terminal → D4, other terminal → GND
+    Green LED  → D7 (with 470Ω to GND)
+    Yellow LED → D6 (with 470Ω to GND)
+    Red LED    → D8 (with 470Ω to GND)
+    Speaker    → D9
+*/
 
-const int speakerPin = 9;
+const int PIN_SWITCH     = 4;
+const int PIN_LED_GREEN  = 8;   // GREEN  on D7
+const int PIN_LED_YELLOW = 6;   // YELLOW on D6
+const int PIN_LED_RED    = 7;   // RED    on D8
+const int PIN_SPEAKER    = 9;
+
+enum State { REST, ARMED, ALARM };
+State currentState = REST;
+
+bool readyForNext = true;  // true = we can accept a new ON press
+
+unsigned long lastToneTime = 0;
+bool toneHigh = false;
+
+void setLEDs(bool green, bool yellow, bool red) {
+  digitalWrite(PIN_LED_GREEN,  green  ? HIGH : LOW);
+  digitalWrite(PIN_LED_YELLOW, yellow ? HIGH : LOW);
+  digitalWrite(PIN_LED_RED,    red    ? HIGH : LOW);
+}
+
+void stopAlarm() {
+  noTone(PIN_SPEAKER);
+  digitalWrite(PIN_SPEAKER, LOW);
+}
+
+void enterREST()  { setLEDs(true,false,false); stopAlarm(); currentState=REST;  Serial.println("STATE: GREEN (REST)"); }
+void enterARMED() { setLEDs(false,true,false); stopAlarm(); currentState=ARMED; Serial.println("STATE: YELLOW (ARMED)"); }
+void enterALARM() { setLEDs(false,false,true); currentState=ALARM; lastToneTime=millis(); Serial.println("STATE: RED (ALARM)"); }
 
 void setup() {
-  pinMode(buttonPin, INPUT_PULLUP);
-
-  pinMode(greenLED, OUTPUT);
-  pinMode(yellowLED, OUTPUT);
-  pinMode(redLED, OUTPUT);
-
-  pinMode(speakerPin, OUTPUT);
+  pinMode(PIN_LED_GREEN,  OUTPUT);
+  pinMode(PIN_LED_YELLOW, OUTPUT);
+  pinMode(PIN_LED_RED,    OUTPUT);
+  pinMode(PIN_SPEAKER,    OUTPUT);
+  pinMode(PIN_SWITCH,     INPUT_PULLUP);
 
   Serial.begin(9600);
-
-  Serial.println("Starting no-MPU test...");
+  Serial.println("=== BOOT ===");
+  enterREST();
 }
 
 void loop() {
+  // INPUT_PULLUP: LOW = switch latched ON, HIGH = switch latched OFF
+  bool switchON = (digitalRead(PIN_SWITCH) == LOW);
 
-  // BUTTONS
-  bool buttonOn = (digitalRead(buttonPin) == LOW);
-
-  Serial.print("Button: ");
-  Serial.println(buttonOn ? "ON" : "OFF");
-
-  // LEDS
-  Serial.println("Testing LEDs...");
-
-  digitalWrite(greenLED, HIGH);
-  delay(2000);
-  digitalWrite(greenLED, LOW);
-
-  digitalWrite(yellowLED, HIGH);
-  delay(2000);
-  digitalWrite(yellowLED, LOW);
-
-  digitalWrite(redLED, HIGH);
-  delay(2000);
-  digitalWrite(redLED, LOW);
-
-  delay(2000);
-
-  // SPEAKER
-  Serial.println("Testing speaker...");
-
-  tone(speakerPin, 1000);
-  delay(1000);
-
-  tone(speakerPin, 1500);
-  delay(1000);
-
-  noTone(speakerPin);
-
-  delay(2000);
-
-  // BUTTON-CONTROL
-  Serial.println("Button controls output now...");
-
-  for (int i = 0; i < 20; i++) {
-    buttonOn = (digitalRead(buttonPin) == LOW);
-
-    if (buttonOn) {
-      // ON → red + sound
-      digitalWrite(redLED, HIGH);
-      digitalWrite(greenLED, LOW);
-      digitalWrite(yellowLED, LOW);
-      tone(speakerPin, 1500);
-    } else {
-      // OFF → green only
-      digitalWrite(greenLED, HIGH);
-      digitalWrite(redLED, LOW);
-      digitalWrite(yellowLED, LOW);
-      noTone(speakerPin);
+  if (switchON && readyForNext) {
+    // Switch just latched ON — advance state immediately, block until OFF
+    readyForNext = false;
+    switch (currentState) {
+      case REST:  enterARMED(); break;
+      case ARMED: enterALARM(); break;
+      case ALARM: enterREST();  break;
     }
-
-    delay(200);
   }
 
-  Serial.println("---- Restarting Test Loop ----");
-  delay(2000);
+  if (!switchON) {
+    // Switch is OFF — allow the next press to register
+    readyForNext = true;
+  }
+
+  // Alarm tone
+  if (currentState == ALARM) {
+    if (millis() - lastToneTime > 350) {
+      tone(PIN_SPEAKER, toneHigh ? 1300 : 750);
+      toneHigh = !toneHigh;
+      lastToneTime = millis();
+    }
+  }
+
+  delay(30);
 }
+
